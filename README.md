@@ -6,7 +6,7 @@ A set of distributed synchronization primitives built upon [etcd](https://github
 
 ### Mutex
 
-### Read-write Mutex
+### Readers-writer Mutex
 
 ### Double Barrier
 
