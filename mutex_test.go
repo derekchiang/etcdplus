@@ -10,14 +10,14 @@ func TestMutex(t *testing.T) {
 	c := etcd.NewClient()
 	mutex := NewMutex(c)
 
-	err := mutex.lock(0)
+	err := mutex.Lock(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	fatal := make(chan bool)
 	go func() {
-		err := mutex.lock(1 * time.Second) // should not succeed
+		err := mutex.Lock(1 * time.Second) // should not succeed
 		if err == nil {
 			fatal <- true
 		} else {
@@ -31,7 +31,7 @@ func TestMutex(t *testing.T) {
 
 	success := make(chan bool)
 	go func() {
-		err := mutex.lock(1)
+		err := mutex.Lock(1)
 		if err == nil {
 			success <- true
 		} else {
@@ -39,7 +39,7 @@ func TestMutex(t *testing.T) {
 		}
 	}()
 
-	err = mutex.unlock()
+	err = mutex.Unlock()
 	if err != nil {
 		t.Fatal(err)
 	}

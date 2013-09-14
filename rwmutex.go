@@ -7,17 +7,17 @@ import (
 )
 
 const (
-	LOCK_VALUE   = "lock"
-	UNLOCK_VALUE = "unlock"
+	R_LOCK_VALUE = "rlock"
+	W_LOCK_VALUE = "wlock"
 )
 
-type Mutex struct {
-	client *etcd.Client
-	key    string
-}
+// A classic readers-writer mutex that allows multiple readers
+// or a single writer to hold the mutex.
+type RWMutex Mutex
 
-func NewMutex(client *etcd.Client) *Mutex {
-	mutex := Mutex{
+// Return a new RWMutex.
+func NewRWMutex(client *etcd.Client) *RWMutex {
+	mutex := RWMutex{
 		client: client,
 		key:    getUUID(),
 	}
@@ -26,7 +26,7 @@ func NewMutex(client *etcd.Client) *Mutex {
 	return &mutex
 }
 
-func (m *Mutex) Lock(timeout time.Duration) error {
+func (m *RWMutex) RLock(timeout time.Duration) error {
 	timeoutChan := getTimeoutChan(timeout)
 
 	for {
@@ -41,11 +41,4 @@ func (m *Mutex) Lock(timeout time.Duration) error {
 			}
 		}
 	}
-}
-
-func (m *Mutex) Unlock() error {
-	_, err := m.client.Set(m.key, UNLOCK_VALUE, 0)
-
-	// TODO: should we keep trying in case err is not nil?
-	return err
 }
