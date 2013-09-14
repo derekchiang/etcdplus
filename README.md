@@ -1,6 +1,6 @@
 # etcdplus
 
-A set of primitives built upon [etcd](https://github.com/coreos/etcd).
+A set of distributed synchronization primitives built upon [etcd](https://github.com/coreos/etcd).
 
 ## Usage
 
@@ -8,7 +8,7 @@ A set of primitives built upon [etcd](https://github.com/coreos/etcd).
 
 ### Mutex
 
-### Read-write Mutex
+### Readers-writer Mutex
 
 ### Double Barrier
 
