@@ -2,27 +2,41 @@ package etcdplus
 
 import (
 	"errors"
+	// "fmt"
 	"github.com/coreos/go-etcd/etcd"
 	"time"
 )
 
 const (
-	LOCK_VALUE   = "lock"
-	UNLOCK_VALUE = "unlock"
+	UNLOCK_VALUE = "unlocked"
 )
 
 type Mutex struct {
-	client *etcd.Client
-	key    string
+	// key is a well-known string that nodes can use to
+	// access the mutex.
+	// lockVal is specific to a node.  When a node locks
+	// a mutex, the value is set to lockVal; since lockVal
+	// is specific to that node, other nodes won't be able
+	// to unlock the mutex.
+	client  *etcd.Client
+	key     string
+	lockVal string
 }
 
-func NewMutex(client *etcd.Client) *Mutex {
-	mutex := Mutex{
-		client: client,
-		key:    getUUID(),
+func NewMutex(client *etcd.Client, key string) *Mutex {
+	// Generate a random key if no key is given.
+	// The user should inspect the returned mutex
+	// and tell other nodes about the key.
+	if key == "" {
+		key = getUUID()
 	}
 
-	client.Set(mutex.key, UNLOCK_VALUE, 0)
+	mutex := Mutex{
+		client:  client,
+		key:     key,
+		lockVal: getUUID(),
+	}
+
 	return &mutex
 }
 
@@ -35,11 +49,20 @@ func (m *Mutex) Lock(timeout time.Duration) error {
 	lockHelper = func() {
 		resps, err := m.client.Get(m.key)
 		if err != nil {
-			panic(err)
-		}
+			etcdErr := err.(etcd.EtcdError)
+			if etcdErr.ErrorCode == 100 {
+				// Create the mutex.
+				// A mutex might be missing for two reasons:
+				// 1. This is the first time anyone ever tries to
+				// lock the mutex.
+				// 2. Some node died when holding the mutex.
+				m.client.TestAndSet(m.key, "", UNLOCK_VALUE, 0)
 
-		if len(resps) != 1 {
-			panic("Multiple responses")
+				// Restart
+				lockHelper()
+				return
+			}
+			panic(err)
 		}
 
 		resp := resps[0]
@@ -48,7 +71,7 @@ func (m *Mutex) Lock(timeout time.Duration) error {
 			// Try to lock if it's unlocked
 			if resp.Value == UNLOCK_VALUE {
 				_, success, _ := m.client.TestAndSet(m.key,
-					UNLOCK_VALUE, LOCK_VALUE, 0)
+					UNLOCK_VALUE, m.lockVal, 0)
 				if success {
 					successChan <- true
 					return
@@ -76,7 +99,7 @@ func (m *Mutex) Lock(timeout time.Duration) error {
 }
 
 func (m *Mutex) Unlock() error {
-	_, err := m.client.Set(m.key, UNLOCK_VALUE, 0)
+	_, _, err := m.client.TestAndSet(m.key, m.lockVal, UNLOCK_VALUE, 0)
 
 	// TODO: should we keep trying in case err is not nil?
 	return err

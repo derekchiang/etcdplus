@@ -8,7 +8,8 @@ import (
 
 func TestMutex(t *testing.T) {
 	c := etcd.NewClient()
-	mutex := NewMutex(c)
+	uuid := getUUID()
+	mutex := NewMutex(c, uuid)
 
 	err := mutex.Lock(1 * time.Second)
 	if err != nil {
