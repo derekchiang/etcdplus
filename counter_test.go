@@ -7,7 +7,7 @@ import (
 
 func TestCounter(t *testing.T) {
 	c := etcd.NewClient()
-	counter := NewCounter(c)
+	counter := NewCounter(c, "")
 
 	// Init value should be 0
 	v, err := counter.GetValue()

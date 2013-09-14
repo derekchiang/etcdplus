@@ -10,13 +10,17 @@ type Counter struct {
 	key    string
 }
 
-func NewCounter(client *etcd.Client) *Counter {
-	counter := Counter{
-		client: client,
-		key:    getUUID(),
+func NewCounter(client *etcd.Client, key string) *Counter {
+	if key == "" {
+		key = getUUID()
 	}
 
-	client.Set(counter.key, "0", 0)
+	counter := Counter{
+		client: client,
+		key:    key,
+	}
+
+	client.TestAndSet(counter.key, "", "0", 0)
 	return &counter
 }
 
