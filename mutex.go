@@ -43,7 +43,12 @@ func NewMutex(client *etcd.Client, key string) *Mutex {
 func (m *Mutex) Lock(timeout time.Duration) error {
 	timeoutChan := getTimeoutChan(timeout)
 	successChan := make(chan bool)
-	stopChan := make(chan bool) // Stop the goroutine
+
+	// Stop any outstanding watches at the end
+	stopChan := make(chan bool, 1)
+	defer func() {
+		stopChan <- true
+	}()
 
 	var lockHelper func()
 	lockHelper = func() {
@@ -91,7 +96,6 @@ func (m *Mutex) Lock(timeout time.Duration) error {
 
 	select {
 	case <-timeoutChan:
-		stopChan <- true
 		return errors.New("Timeout")
 	case <-successChan:
 		return nil
